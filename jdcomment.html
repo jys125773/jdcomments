@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<link rel="stylesheet" href="css/JDcomment.css">
+	<link rel="stylesheet" href="css/page.css">
+	<style type="text/css">
+	#pagination{
+		margin:40px 0 60px;
+	}
+	</style>
+</head>
+<body>
+	<div id="comment">
+		<div id="comment-hd">
+			<h2>商品评价</h2>
+
+		</div>
+		<div class="tab"></div>
+		<div class="feeds">
+			
+		</div>
+		<div id="pagination"></div>
+	</div>
+	<script type="text/template" id="brief-template">
+		<div class="brief">
+				<div class="rate"> <strong><%=goodRateShow%><span>%</span></strong>
+					<p>好评度</p>
+				</div>
+				<div class="percent">
+					<dl>
+						<dt>
+							好评
+							<span>(<%=goodRateShow%>%)</span>
+						</dt>
+
+						<dd>
+							<p  style="width:<%=goodRateShow%>%"></p>
+						</dd>
+					</dl>
+					<dl>
+						<dt>
+							中评
+							<span>(<%=generalRateShow%>%)</span>
+						</dt>
+						<dd>
+							<p style="width:<%=generalRateShow%>%"></p>
+						</dd>
+					</dl>
+					<dl>
+						<dt>
+							差评
+							<span>(<%=poorRateShow%>%)</span>
+						</dt>
+						<dd>
+							<p style="width:<%=poorRateShow%>%"></p>
+						</dd>
+					</dl>
+				</div>
+				<div class="impress">
+					<dl>
+						<dt>买家印象：</dt>
+
+						<dd></dd>
+					</dl>
+				</div>
+			</div>
+	</script>
+	<script type="text/template" id="tab-template">
+		<ul>
+				<li class="all cur"><a href="javascript:;">全部评价<span>(<%=commentCountStr%>)</span></a></li>
+				<li class="show"><a href="javascript:;">晒图<span>(<%=imageListCount%>)</span></a></li>
+				<li class="good"><a href="javascript:;">好评<span>(<%=goodCountStr%>)</span></a></li>
+				<li class="general"><a href="javascript:;">中评<span>(<%=generalCount%>)</span></a></li>
+				<li class="bad"><a href="javascript:;">差评<span>(<%=poorCountStr%>)</span></a></li>
+				<li><input type="checkbox" id="onlyCurrent"><label for="onlyCurrent">只看当前商品评价</label></li>
+		</ul>
+	</script>
+	<script type="text/template" id="feed-template">
+			<div class="feed">
+				<div class="col1">
+					<p class="stars"></p>
+					<p class="delayComment">购买<%=days%>天后评价</p>
+					<p class="comment-time"><%=creationTime%></p>
+					<p class="product-type"><%=productSize%></p>
+				</div>
+				<div class="col2">
+					<div class="comment-content">
+						<%=content%>
+					</div>
+					<div class="NRE">
+						<a href="javascript:;" class="nice">
+							点赞（<%=usefulVoteCount%>）
+						</a>
+						<a href="javascript:;" class="replay">
+							回复（<%=replyCount%>）
+						</a>
+					</div>
+					<div class="interact">
+						<div class="replay-area">
+							<textarea class="reply-input" placeholder="回复 <%=nickname%>：" maxlength="120"></textarea>
+							<p class="replay-submit">提交</p>
+						</div>
+						<div class="replay-list"></div>
+					</div>
+				</div>
+				<div class="col3">
+					<div class="user-comment">
+						<p class="user">
+							<img src="//<%=userImageUrl%>" class="user-ico">
+							<span class="user-name"><%=nickname%></span>
+						</p>
+						<span class="vip-level" style="color:<%=userLevelColor%>"><%=userLevelName%></span>
+						<span class="addr"><%=userProvince%></span>
+						<p class="user-access"><%=userClientShow%></p>
+					</div>
+				</div>
+			</div>
+	</script>
+	<script type="text/template" id="FeedPicShower-tempalte">
+		<div class="photo-tip">
+						<div class="nav-bar">
+							<div class="pic-list">
+								<ol class="move-unit">
+								</ol>
+							</div>
+							<a href="javascipt:;" class="btn pre-btn"></a>
+							<a href="javascipt:;" class="btn next-btn"></a>
+						</div>
+						<div class="tip-up">
+							<span></span>
+							收起
+						</div>
+						<div class="big-pic">
+							<img class="big-img" src="//img30.360buyimg.com/n0/s616x405_jfs/t3526/120/1484772024/110975/5078f787/5827eabbNa9297bf9.jpg">
+							<span class="to-pre"></span>
+							<span class="to-next"></span>
+						</div>
+		</div>
+	</script>
+	<script type="text/template" id="replayItem-template">
+			<div class="replay-item">
+						<p>
+							<span class="questioner"><%=nickname%>：</span>
+							<span class="word"><%=content%></span>
+							<span class="replay-time"><%=creationTime%></span>
+						</p>
+						<a href="javascript:;" class='replay-btn'>回复</a>
+						<div class="replay-area">
+							<textarea class="reply-input" placeholder="回复 <%=nickname%>：" maxlength="120"></textarea>
+							<div class="submit">提交</div>
+						</div>
+			</div>
+	</script>
+	<script type="text/javascript" src="js/jquery-1.12.3.min.js"></script>
+	<script type="text/javascript" src="js/underscore-min.js"></script>
+	<script type="text/javascript" src="js/page.js"></script>
+	<script type="text/javascript">
+	function Manager(){
+		this.score = -1;
+		this.page = 0;
+		this.$dom = $("#comment");
+		this.$feedsDom = this.$dom.find('.feeds');
+		this.feeds = [];
+		this.tab = null;//评价查看tab条
+		this.brief = null;//评价统计梗概
+		this.pager = null;
+		this.flag = true;
+		this.creat(0,this.page);
+	}
+	Manager.prototype.creat = function(score,page){
+		var self = this;
+		$.ajax({
+			// "url":"https://sclub.jd.com/comment/productPageComments.action?productId=2269354&score="+score+"&sortType=3&page="+page+"&pageSize=10&callback=?",
+			"url":"https://sclub.jd.com/comment/productPageComments.action?productId=3575253&score=0&sortType=3&pa	ge="+page+"&pageSize=10&isShadowSku=0&callback=?",
+			"dataType":"jsonp",
+			"success":function(data){
+				if (self.flag){
+					self.flag = false;
+					self.brief = new Brief(data.productCommentSummary,data.hotCommentTagStatistics);
+					self.tab = new Tab(data);
+				};
+				if (self.score != score) {
+					console.log(110);
+					self.score = score;
+					self.$feedsDom.empty();
+					$("#pagination").empty();
+					self.pager = new Pagination({
+						"id":"pagination",//id名
+						"cur":self.page+1,
+						"total":data.maxPage,
+						"change":function(page){
+							self.$feedsDom.empty();
+							self.creat(self.score,page-1);
+						}
+					});
+				};
+				_.each(data.comments,function(dic){
+					var feed = new Feed(dic);
+					if (dic.commentTags) {
+						var $label = $("<div class='labels'></div>").prependTo(feed.$dom.find('.col2'));
+						_.each(dic.commentTags,function(tag){
+							$("<span>"+tag.name+"</span>").appendTo($label);
+						});
+					};
+					if (dic.images) {
+						var $ol = $("<ol class='thumb-pics'></ol>").appendTo(feed.$dom.find(".comment-content"));
+						var picArr = [];
+						_.each(dic.images,function(img){
+							img.imgUrl = img.imgUrl.replace('s128x96_jfs','s76x76_jfs');
+							$("<li><img src='"+img.imgUrl+"'/></li>").appendTo($ol);
+							picArr.push(img.imgUrl);
+						});
+						feed.thumb_ol = feed.$dom.find('ol.thumb-pics');
+						feed.thumb_pics = feed.$dom.find('ol.thumb-pics li');
+						feed.feedPicShower = new FeedPicShower(picArr,0,feed.$dom.find('.NRE'));
+						feed.photo_tip = feed.$dom.find('.photo-tip');
+						feed.thumb_pics.click(function(){
+							if (/open/.test(feed.photo_tip[0].className)) {
+								feed.photo_tip.removeClass('open');
+								feed.thumb_ol.show();
+							} else{
+								feed.photo_tip.addClass('open');
+								feed.thumb_ol.hide();
+							};
+							var current = $(this).index();
+							feed.feedPicShower.idx = current;
+							
+							feed.feedPicShower.small_imgs.eq(current).addClass('cur').siblings().removeClass('cur');
+							//换大图
+							var bigPicUrl = picArr[current].replace('s76x76_jfs','s616x405_jfs');
+							feed.feedPicShower.big_img.attr('src', bigPicUrl);
+							var dis = -552*Math.floor(current/6);
+							var len = feed.feedPicShower.picArr.length;
+							if (len > 6 && current >= Math.floor(len/6)*6) {
+								dis += 92*feed.feedPicShower.keyNum;
+							};
+							feed.feedPicShower.move_unit.css('left', dis);
+						});
+
+					};
+					if (dic.replies) {
+						_.each(dic.replies,function(replay){
+							new ReplayItem(replay,feed.replay_list);
+							if (replay.parent) {
+								$('<span>回复</span><span class="user">'+ replay.parent.nickname +'：</span>').insertAfter(feed.$dom.find('.replay-item p span').eq(0));
+							};
+						});
+					};
+				});
+				// console.log(self.feeds);
+			}
+		});
+	};
+	function ReplayItem(dic,parentNode){
+		this.$dom = $(_.template($("#replayItem-template").html())(dic)).appendTo(parentNode);
+		this.second_replay =  this.$dom.find('.replay-btn');
+		this.second_replayArea = this.$dom.find('.replay-area');
+		this.bindEvent();
+	}
+	ReplayItem.prototype.bindEvent = function(){
+		var self = this;
+		this.second_replay.click(function(event) {
+			self.second_replayArea.toggle();
+		});
+	};
+	function Feed(dic){
+		this.$dom = $(_.template($("#feed-template").html())(dic)).appendTo('#comment .feeds');
+		this.thumb_ol = null;
+		this.thumb_pics = [];//就是评论下面展示的一组小图片，$数组类型
+		this.photo_tip = null;
+		
+		this.feedPicShower = null;
+
+		this.nice = this.$dom.find('.NRE .nice');//点赞
+		this.replay = this.$dom.find('.NRE .replay');//回复
+
+		this.stars = this.$dom.find('.stars');
+		this.stars[0].style.backgroundPosition = -17*(5-dic.score)+'px 0';
+		this.replay_list =  this.$dom.find('.replay-list');//交谈列表
+		this.submit_btn = this.$dom.find('.replay-submit');//回复提交按钮
+		this.interact = this.$dom.find('.interact');//会话区域
+		// console.log(this.interact);
+		this.bindEvent();
+		manager.feeds.push(this);
+	}
+	Feed.prototype.bindEvent = function(){
+		var self = this;
+		this.replay.click(function(){
+			self.interact.toggle();
+		});
+	};
+	function FeedPicShower(picArr,idx,nextSiblingDom){
+		this.$dom = $($("#FeedPicShower-tempalte").html()).insertBefore(nextSiblingDom); 
+		this.move_unit = this.$dom.find('.move-unit');//运动机构
+
+		this.small_imgs = [];//导航小图片们
+		this.pre_btn = this.$dom.find('.pre-btn');//一行小图片左边按钮
+		this.next_btn = this.$dom.find('.next-btn');
+
+		this.to_pre = this.$dom.find('.to-pre');//大图片的左半边按钮
+		this.to_next = this.$dom.find('.to-next');
+
+		this.big_img = this.$dom.find('.big-img');
+		this.tip_up = this.$dom.find('.tip-up');
+		this.picArr = picArr;
+		this.keyNum = Math.ceil(this.picArr.length/6)*6 - this.picArr.length;
+		this.idx = idx;//信号量，当前第几张
+		this.init();
+		this.bindEvent();
+	}
+	FeedPicShower.prototype.bindEvent = function(){
+		var self = this;
+		//折起影藏
+		this.tip_up.click(function(){
+			self.$dom.removeClass('open');
+			var t = self.$dom.parents('.feed').find('.thumb-pics');
+			t.show();
+		});
+		//单纯点击事件
+		this.small_imgs.click(function(){
+			$(this).addClass('cur').siblings().removeClass('cur');
+			var v = $(this).index();
+			var bigPicUrl = self.picArr[v].replace('s76x76_jfs','s616x405_jfs');
+			self.big_img.attr('src', bigPicUrl);
+			self.idx = v;
+		});
+		this.next_btn.click(function(){
+			self.toNext();
+		});
+		this.pre_btn.click(function(){
+			self.toPre();
+		});
+		this.to_next.click(function(){
+			self.toNext();
+		});
+		this.to_pre.click(function(){
+			self.toPre();
+		});
+	};
+	FeedPicShower.prototype.toNext = function(){
+		this.idx++;
+		if (this.idx === this.picArr.length) {
+			this.idx = this.picArr.length -1;
+			return;
+		};
+		if (this.idx%6 === 0) {
+			var n = Math.floor(this.idx/6),
+				dis = -552*n;
+			if (this.picArr.length - this.idx < 6) {
+				dis +=92*this.keyNum;//补偿
+			};
+			this.move_unit.stop(true).animate({"left": dis}, 500);
+		};
+		this.small_imgs.eq(this.idx).addClass('cur').siblings().removeClass('cur');
+		var bigPicUrl = this.picArr[this.idx].replace('s76x76_jfs','s616x405_jfs');
+		this.big_img.attr('src', bigPicUrl);
+	};
+	FeedPicShower.prototype.toPre = function(){
+		this.idx--;
+		if (this.idx === -1) {
+			this.idx = 0;
+			return;
+		};
+		if ((this.idx-5+this.keyNum)%6 === 0) {//推迟this.keyNum move_unit运动
+			var v = Math.floor(this.idx/6),
+				dis = -552*v;
+			this.move_unit.stop(true).animate({"left":dis}, 500);
+		};
+		this.small_imgs.eq(this.idx).addClass('cur').siblings().removeClass('cur');
+		var bigPicUrl = this.picArr[this.idx].replace('s76x76_jfs','s616x405_jfs');
+		this.big_img.attr('src', bigPicUrl);
+	};
+	FeedPicShower.prototype.init = function(){
+
+		var self = this;
+		_.each(this.picArr,function(picUrl){
+			$("<li><img src='"+picUrl+"'/></li>").appendTo(self.move_unit);
+		});
+		this.small_imgs =  this.$dom.find('.move-unit li');
+	};
+	
+	function Brief(mainDic,dic){
+		this.$dom = $(_.template($("#brief-template").html())(mainDic)).appendTo('#comment-hd');
+		var dd = this.$dom.find('.impress dd');
+		_.each(dic,function(obj){
+			$("<p>"+obj.name+"<span>("+obj.count+")</span></p>").appendTo(dd);
+		});
+	};
+	function Tab(data){
+		var dic = data.productCommentSummary;
+		dic.imageListCount = data.imageListCount;
+		this.$dom = $(_.template($("#tab-template").html())(dic)).appendTo('.tab');
+		this.bad_btn = this.$dom.find('.bad');
+		this.all_btn = this.$dom.find('.all');
+		this.general_btn = this.$dom.find('.general');
+		this.good_btn = this.$dom.find('.good');
+		this.bindEvent();
+	}
+	Tab.prototype.bindEvent = function(){
+		var self = this;
+		this.bad_btn.click(function(event) {
+			manager.creat(1,0);
+			$(this).addClass('cur').siblings().removeClass('cur');
+		});
+		this.general_btn.click(function(event) {
+			manager.creat(2,0);
+			$(this).addClass('cur').siblings().removeClass('cur');
+		});
+		this.good_btn.click(function(event) {
+			manager.creat(3,0);
+			$(this).addClass('cur').siblings().removeClass('cur');
+		});
+		this.all_btn.click(function(event) {
+			manager.creat(0,0);
+			$(this).addClass('cur').siblings().removeClass('cur');
+		});
+	}
+	var manager = new Manager();
+	</script>
+</body>
+</html>
